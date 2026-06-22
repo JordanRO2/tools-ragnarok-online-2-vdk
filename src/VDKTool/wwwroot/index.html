@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>VDK Toolkit — RO2</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- ============================ HEADER (sticky) ============================ -->
+  <header class="app-bar">
+    <div class="brand">
+      <img class="brand-logo" src="/logo.svg" alt="VDK Toolkit" width="180" height="40" />
+      <span class="ver" id="version" title="server version"></span>
+      <span class="status-chip" title="server health" aria-live="polite">
+        <span class="health" id="health"></span>
+        <span class="status-text" id="status-text">Online</span>
+      </span>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab active" id="tab-vdk" data-tab="vdk" role="tab" aria-selected="true" aria-controls="panel-vdk" tabindex="0" data-icon="extract">VDK Archives</button>
+      <button class="tab" id="tab-ct" data-tab="ct" role="tab" aria-selected="false" aria-controls="panel-ct" tabindex="-1" data-icon="convert">CT Tables</button>
+    </nav>
+
+    <div class="bar-actions">
+      <button class="icon-btn" id="btn-settings" type="button" title="Settings" data-tip="Settings" data-icon="settings" aria-label="Open settings" aria-haspopup="dialog"></button>
+      <div class="theme-switch" id="theme-switch" role="radiogroup" aria-label="Color theme">
+        <button class="theme-opt" data-theme-choice="light"  title="Light theme"  aria-label="Light theme"  role="radio" aria-checked="false" tabindex="-1" data-icon="sun"></button>
+        <button class="theme-opt" data-theme-choice="system" title="Match system" aria-label="Match system theme" role="radio" aria-checked="false" tabindex="-1" data-icon="monitor"></button>
+        <button class="theme-opt" data-theme-choice="dark"   title="Dark theme"   aria-label="Dark theme"   role="radio" aria-checked="false" tabindex="-1" data-icon="moon"></button>
+      </div>
+    </div>
+
+    <!-- Custom window controls (chromeless native window only; hidden in a browser). -->
+    <div class="win-ctrls" id="win-ctrls" aria-hidden="true">
+      <button class="win-btn" id="win-min"   type="button" title="Minimize" aria-label="Minimize" data-icon="win-min"></button>
+      <button class="win-btn" id="win-max"   type="button" title="Maximize" aria-label="Maximize" data-icon="win-max"></button>
+      <button class="win-btn win-close" id="win-close" type="button" title="Close" aria-label="Close" data-icon="cross"></button>
+    </div>
+  </header>
+
+  <!-- ============================ PAGE (scrolls BELOW the sticky title bar) ====== -->
+  <div class="scroll-area" id="scroll-area">
+  <main class="layout">
+    <div class="workspace">
+      <!-- ============================ VDK TAB ============================ -->
+      <section class="panel tab-panel active" id="panel-vdk" role="tabpanel" aria-labelledby="tab-vdk" tabindex="0">
+        <div class="main-stack">
+          <div class="panel-headrow">
+            <h1 class="panel-title">VDK Archives</h1>
+            <p class="panel-sub">Read, preview, extract and repack VDISK archives byte-for-byte.</p>
+          </div>
+
+          <!-- STEP 1 — Open archive (entry point) -->
+          <section class="card step">
+            <div class="card-head">
+              <h2><span class="section-marker" data-icon="list"></span><span class="section-title">Open archive</span></h2>
+              <span class="badge" id="vdk-meta" hidden></span>
+            </div>
+            <p class="hint">Point at a <code>.vdk</code> file and list its contents to start.</p>
+            <div class="field field-inline">
+              <label for="vdkPath">VDK file</label>
+              <div class="path-row drop-zone" data-drop="vdkPath">
+                <input type="text" id="vdkPath" placeholder="Drop a .vdk here or browse (the dialog confirms its real path)" spellcheck="false" />
+                <button class="btn icon-pick" data-pick-file="vdkPath" data-filter="VDK files (*.vdk)|*.vdk|All files (*.*)|*.*" data-title="Select VDK archive" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Browse for VDK file"></button>
+                <button class="btn primary icon-only" id="btn-list" data-icon="list" data-tip="List contents" title="List contents" aria-label="List contents"><span class="icon-label-hide">List contents</span></button>
+              </div>
+            </div>
+
+            <!-- Stat grid: SAME layout whether loaded or empty. Empty shows "—"
+                 placeholders + a hint line; loaded fills the values. setVdkStats()
+                 toggles [hidden] on #vdk-stat-grid / #vdk-stat-empty. -->
+            <div class="stat-grid" id="vdk-stat-grid" data-empty="true">
+              <div class="stat">
+                <span class="stat-label">VDISK</span>
+                <span class="stat-value" id="stat-version">—</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Files</span>
+                <span class="stat-value" id="stat-files">—</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Folders</span>
+                <span class="stat-value" id="stat-folders">—</span>
+              </div>
+            </div>
+            <p class="stat-empty-hint" id="vdk-stat-empty">No archive loaded yet — list a VDK to populate these counts.</p>
+          </section>
+
+          <!-- STEP 2 — Contents: file list + preview (main work area) -->
+          <section class="card content-card">
+            <div class="card-head">
+              <h2><span class="section-marker" data-icon="file"></span><span class="section-title">Contents &amp; preview</span></h2>
+            </div>
+            <div class="split">
+              <div class="files-pane">
+                <div class="pane-head">
+                  <span class="pane-title">Files</span>
+                  <div class="search">
+                    <span class="search-ico" data-icon="search"></span>
+                    <input type="text" id="vdk-filter" placeholder="Filter files" spellcheck="false" aria-label="Filter files" />
+                  </div>
+                </div>
+                <div class="files-scroll">
+                  <table class="files" id="vdk-table">
+                    <thead><tr><th scope="col">Path</th><th scope="col" class="num">Size</th></tr></thead>
+                    <tbody id="vdk-files"></tbody>
+                  </table>
+                  <div class="empty" id="vdk-empty"></div>
+                </div>
+              </div>
+              <div class="preview">
+                <div class="pane-head">
+                  <span id="preview-name" class="pane-title">Preview</span>
+                  <span class="seg" id="preview-modes" hidden role="radiogroup" aria-label="Preview mode">
+                    <button class="seg-btn active" data-pmode="text" role="radio" aria-checked="true" tabindex="0">Text</button>
+                    <button class="seg-btn" data-pmode="hex" role="radio" aria-checked="false" tabindex="-1">Hex</button>
+                  </span>
+                </div>
+                <div class="preview-trunc" id="preview-trunc" hidden></div>
+                <div class="preview-info" id="preview-info" hidden></div>
+                <pre class="preview-body" id="preview-body"></pre>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 3 — Extract -->
+          <section class="card step">
+            <div class="card-head">
+              <h2><span class="section-marker" data-icon="extract"></span><span class="section-title">Extract</span></h2>
+            </div>
+            <p class="hint">Extract every entry to a folder — files plus empty directories. Repack rebuilds the archive byte-for-byte from this folder alone.</p>
+            <div class="field field-inline">
+              <label for="extractOut">Extract to folder</label>
+              <div class="path-row drop-zone" data-drop="extractOut">
+                <input type="text" id="extractOut" placeholder="Output directory" spellcheck="false" />
+                <button class="btn icon-pick" data-pick-folder="extractOut" data-title="Select output folder" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Browse for output folder"></button>
+                <button class="btn primary icon-only" id="btn-extract" data-icon="extract" data-tip="Extract" title="Extract" aria-label="Extract"><span class="icon-label-hide">Extract</span></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 4 — Repack -->
+          <section class="card step">
+            <div class="card-head">
+              <h2><span class="section-marker" data-icon="pack"></span><span class="section-title">Repack</span></h2>
+            </div>
+            <p class="hint">Reconstructs a byte-exact VDK purely from the folder tree — files and empty directories alike.</p>
+            <div class="field field-inline">
+              <label for="packSrc">Source folder</label>
+              <div class="path-row drop-zone" data-drop="packSrc">
+                <input type="text" id="packSrc" placeholder="Extracted folder" spellcheck="false" />
+                <button class="btn icon-pick" data-pick-folder="packSrc" data-title="Select source folder" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Browse for source folder"></button>
+              </div>
+            </div>
+            <div class="field field-inline">
+              <label for="packOut">Output VDK</label>
+              <div class="path-row drop-zone" data-drop="packOut">
+                <input type="text" id="packOut" placeholder="Output .vdk path" spellcheck="false" />
+                <button class="btn icon-pick" data-pick-save="packOut" data-default="repacked.vdk" data-filter="VDK files (*.vdk)|*.vdk" data-title="Save VDK as" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Choose output VDK path"></button>
+                <button class="btn primary icon-only" id="btn-pack" data-icon="pack" data-tip="Pack archive" title="Pack archive" aria-label="Pack archive"><span class="icon-label-hide">Pack archive</span></button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ============================ CT TAB ============================ -->
+      <section class="panel tab-panel" id="panel-ct" role="tabpanel" aria-labelledby="tab-ct" tabindex="0">
+        <div class="main-stack">
+          <div class="panel-headrow">
+            <h1 class="panel-title">CT Tables</h1>
+            <p class="panel-sub">Convert RO2 binary CT tables to spreadsheets and back, one file or a whole tree.</p>
+          </div>
+
+          <!-- GROUP: single-file conversion (both directions in one card) -->
+          <section class="card step">
+            <div class="card-head">
+              <h2><span class="section-marker" data-icon="convert"></span><span class="section-title">Convert a file</span></h2>
+            </div>
+            <p class="hint">Decode a binary CT table to an editable spreadsheet, or re-encode an edited spreadsheet back into a CT.</p>
+
+            <!-- sub-block: CT -> spreadsheet -->
+            <div class="subgroup">
+              <span class="subgroup-label" data-icon="ctToSheet">CT to spreadsheet</span>
+              <div class="field field-inline">
+                <label for="ctPath">CT file</label>
+                <div class="path-row drop-zone" data-drop="ctPath">
+                  <input type="text" id="ctPath" placeholder="Drop a .ct here or browse" spellcheck="false" />
+                  <button class="btn icon-pick" data-pick-file="ctPath" data-filter="CT files (*.ct)|*.ct|All files (*.*)|*.*" data-title="Select CT file" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Browse for CT file"></button>
+                  <div class="config-group">
+                    <span class="config-label" id="ctto-label">Output</span>
+                    <div class="seg" id="ctto-seg" role="radiogroup" aria-labelledby="ctto-label">
+                      <button class="seg-btn active" data-ctto="xlsx" role="radio" aria-checked="true" tabindex="0">XLSX</button>
+                      <button class="seg-btn" data-ctto="csv" role="radio" aria-checked="false" tabindex="-1">CSV</button>
+                    </div>
+                  </div>
+                  <button class="btn primary icon-only" id="btn-ct-to" data-icon="ctToSheet" data-tip="Convert" title="Convert" aria-label="Convert CT to spreadsheet"><span class="icon-label-hide">Convert</span></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="subgroup-divider" role="separator"></div>
+
+            <!-- sub-block: spreadsheet -> CT -->
+            <div class="subgroup">
+              <span class="subgroup-label" data-icon="sheetToCt">Spreadsheet to CT</span>
+              <div class="field field-inline">
+                <label for="ctFromIn">Input (.xlsx / .csv)</label>
+                <div class="path-row drop-zone" data-drop="ctFromIn">
+                  <input type="text" id="ctFromIn" placeholder="Drop a .xlsx / .csv or browse" spellcheck="false" />
+                  <button class="btn icon-pick" data-pick-file="ctFromIn" data-filter="Spreadsheets (*.xlsx;*.csv)|*.xlsx;*.csv|All files (*.*)|*.*" data-title="Select spreadsheet" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Browse for spreadsheet"></button>
+                </div>
+              </div>
+              <div class="field field-inline">
+                <label for="ctFromOut">Output CT <span class="label-opt">(optional)</span></label>
+                <div class="path-row drop-zone" data-drop="ctFromOut">
+                  <input type="text" id="ctFromOut" placeholder="Defaults to input name .ct" spellcheck="false" />
+                  <button class="btn icon-pick" data-pick-save="ctFromOut" data-default="table.ct" data-filter="CT files (*.ct)|*.ct" data-title="Save CT as" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Choose output CT path"></button>
+                  <button class="btn primary icon-only" id="btn-ct-from" data-icon="sheetToCt" data-tip="Convert" title="Convert" aria-label="Convert spreadsheet to CT"><span class="icon-label-hide">Convert</span></button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card step">
+            <div class="card-head">
+              <h2><span class="section-marker" data-icon="batch"></span><span class="section-title">Batch convert</span></h2>
+            </div>
+            <p class="hint">Convert every <code>.ct</code> in a folder, recursively.</p>
+            <div class="field field-inline">
+              <label for="batchDir">Folder</label>
+              <div class="path-row drop-zone" data-drop="batchDir">
+                <input type="text" id="batchDir" placeholder="Folder with .ct files" spellcheck="false" />
+                <button class="btn icon-pick" data-pick-folder="batchDir" data-title="Select folder" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Browse for folder"></button>
+                <div class="config-group">
+                  <span class="config-label" id="ctbatch-label">Output</span>
+                  <div class="seg" id="ctbatch-seg" role="radiogroup" aria-labelledby="ctbatch-label">
+                    <button class="seg-btn active" data-ctbatch="xlsx" role="radio" aria-checked="true" tabindex="0">XLSX</button>
+                    <button class="seg-btn" data-ctbatch="csv" role="radio" aria-checked="false" tabindex="-1">CSV</button>
+                  </div>
+                </div>
+                <button class="btn primary icon-only" id="btn-ct-batch" data-icon="batch" data-tip="Convert all" title="Convert all" aria-label="Convert all CT files in folder"><span class="icon-label-hide">Convert all</span></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Batch results -->
+          <section class="card content-card">
+            <div class="card-head"><h2><span class="section-marker" data-icon="table"></span><span class="section-title">Batch results</span></h2></div>
+            <div class="split-single">
+              <div class="files-pane">
+                <div class="pane-head">
+                  <span class="pane-title">Results</span>
+                  <span class="badge" id="batch-meta"></span>
+                </div>
+                <div class="files-scroll">
+                  <table class="files" id="batch-table">
+                    <thead><tr><th scope="col" class="status-col">&nbsp;</th><th scope="col">File</th><th scope="col">Detail</th></tr></thead>
+                    <tbody id="batch-rows"></tbody>
+                  </table>
+                  <div class="empty" id="batch-empty"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============================ LOG (full-width bottom panel) ============================ -->
+    <aside class="log-panel" id="log-panel">
+      <div class="log-head">
+        <span data-icon="list">Output log</span>
+        <div class="log-head-actions">
+          <button class="icon-btn small" id="log-clear" title="Clear log" data-tip="Clear log" data-icon="cross" aria-label="Clear log"></button>
+        </div>
+      </div>
+      <div class="log-body" id="log" role="log" aria-live="polite"></div>
+    </aside>
+  </main>
+  </div>
+
+  <!-- inline activity bar (short synchronous ops only) -->
+  <div class="busy" id="busy" hidden role="status" aria-label="Working">
+    <div class="busy-box">
+      <div class="spinner"></div>
+      <div class="busy-text" id="busy-text">Working</div>
+    </div>
+  </div>
+
+  <!-- job progress modal (extract / pack / batch) -->
+  <div class="progress" id="progress" hidden role="dialog" aria-modal="true" aria-labelledby="progress-label">
+    <div class="progress-box">
+      <div class="progress-top">
+        <span class="progress-label" id="progress-label">Working</span>
+        <span class="progress-count" id="progress-count" aria-live="polite"></span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-bottom">
+        <span class="progress-item" id="progress-item"></span>
+        <button class="btn cancel icon-only" id="progress-cancel" data-icon="cancel" data-tip="Cancel" title="Cancel" aria-label="Cancel"><span class="icon-label-hide">Cancel</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- settings modal (default output folder) -->
+  <div class="modal" id="settings-modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2 id="settings-title"><span class="section-marker" data-icon="settings"></span><span class="section-title">Settings</span></h2>
+        <button class="icon-btn small" id="settings-close" type="button" title="Close" data-tip="Close" data-icon="cross" aria-label="Close settings"></button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="setDefaultOut">Default output folder</label>
+          <div class="path-row drop-zone" data-drop="setDefaultOut">
+            <input type="text" id="setDefaultOut" placeholder="No default — outputs go where you choose" spellcheck="false" />
+            <button class="btn icon-pick" data-pick-folder="setDefaultOut" data-title="Select default output folder" data-icon="folder" data-tip="Browse" title="Browse" aria-label="Browse for default output folder"></button>
+            <button class="btn icon-pick" id="setDefaultOut-clear" type="button" data-icon="cross" data-tip="Clear" title="Clear" aria-label="Clear default output folder"></button>
+          </div>
+          <p class="hint">Pre-fills the Extract folder and opens every Browse dialog here by default. Each operation's own output field still overrides it.</p>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" id="settings-cancel" type="button">Cancel</button>
+        <button class="btn primary" id="settings-save" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- chromeless-window resize handles (native window only; inert in a browser) -->
+  <div class="resize-handles" id="resize-handles" aria-hidden="true">
+    <div class="rz rz-t"  data-edge="t"></div>
+    <div class="rz rz-b"  data-edge="b"></div>
+    <div class="rz rz-l"  data-edge="l"></div>
+    <div class="rz rz-r"  data-edge="r"></div>
+    <div class="rz rz-tl" data-edge="tl"></div>
+    <div class="rz rz-tr" data-edge="tr"></div>
+    <div class="rz rz-bl" data-edge="bl"></div>
+    <div class="rz rz-br" data-edge="br"></div>
+  </div>
+
+  <!-- toast container -->
+  <div class="toasts" id="toasts" role="alert" aria-live="assertive"></div>
+
+  <script src="/app.js"></script>
+
+  <!-- pretext integration (isolated ES module so app.js stays a classic script).
+       Measures/wraps preview + log text with @chenglou/pretext (vendored,
+       offline). If the module or its runtime deps (Intl.Segmenter / Canvas)
+       are unavailable, app.js's plain <pre>/pre-wrap render stays in effect. -->
+  <script type="module" src="/pretext-integration.mjs"></script>
+</body>
+</html>

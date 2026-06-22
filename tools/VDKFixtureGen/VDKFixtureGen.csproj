@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Standalone fixture generator. INTENTIONALLY NOT part of VDKTool.sln.
+
+    This project writes RO2 VDK (VDISK1.1) and CT (RO2SEC!) bytes DIRECTLY,
+    byte-by-byte, with its own writers. It does NOT reference VDKTool.Core and
+    MUST NOT call VDKPacker.PackWithManifest or CTProcessor.Write. The on-disk
+    layout was reverse-derived from VDKTool.Core's PARSERS
+    (VDKArchive.Load / CTProcessor.Read) and we emit the inverse bytes.
+
+    zlib: System.IO.Compression.ZLibStream at SmallestSize (level ~6/9 -> header
+    78 9C), which is a DIFFERENT byte stream from ProDotNetZip/Ionic used by the
+    Core packer. This guarantees the generator is an independent producer.
+
+    CRC-16: own XMODEM implementation (poly 0x1021, init 0x0000).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>VDKFixtureGen</RootNamespace>
+    <AssemblyName>VDKFixtureGen</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- CodePages IS required (EUC-KR cp51949); NU1510 prune hint is a false
+         positive here, same rationale as VDKTool.Core. -->
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- EUC-KR (codepage 51949) for the non-ASCII filename. Own dependency,
+         not borrowed from Core. -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

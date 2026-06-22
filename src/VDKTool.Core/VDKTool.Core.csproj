@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>VDKTool.Core</RootNamespace>
+    <AssemblyName>VDKTool.Core</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <!--
+      System.Text.Encoding.CodePages is referenced DIRECTLY and on purpose: it
+      provides the EUC-KR (codepage 51949) provider VDKArchive registers for
+      VDK filename decoding. The .NET 10 SDK's framework-package pruning would
+      otherwise flag it as removable (NU1510), which is a false positive here,
+      so that diagnostic is suppressed for this project only.
+    -->
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+    <!--
+      Direct, non-vulnerable pin of System.IO.Packaging to override the version
+      ClosedXML 0.102.2 drags in transitively (6.0.0, affected by
+      GHSA-f32c-w444-8ppv / GHSA-qj66-m88j-hmgj -> NU1903). 10.0.x is the
+      net10-aligned stable line; the advisories are fixed since 8.0.1.
+    -->
+    <PackageReference Include="System.IO.Packaging" Version="10.0.9" />
+    <PackageReference Include="ClosedXML" Version="0.102.2" />
+  </ItemGroup>
+
+</Project>

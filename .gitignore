@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+publish/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.binlog
+
+# Test output
+[Tt]est[Rr]esults/
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Local context
+CLAUDE.md
+
+# Local client round-trip runner scratch dir (test-client.ps1 default -Out)
+_clienttest/

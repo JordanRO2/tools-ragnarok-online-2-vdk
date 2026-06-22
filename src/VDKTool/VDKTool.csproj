@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>VDK_Tool</AssemblyName>
+    <RootNamespace>VDKTool</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <!-- Keep InformationalVersion exactly "1.0.0" (no "+<sha>" source-revision
+         suffix), so /api/health and the in-app version read clean. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+
+    <!-- App/exe/taskbar icon (also used as the Photino window icon at runtime). -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
+
+    <!-- Single-file self-contained publish defaults (used by build.ps1 and
+         `dotnet publish`). RuntimeIdentifier is set at publish time so a plain
+         `dotnet build` stays framework-dependent and fast. -->
+    <RuntimeIdentifier Condition="'$(PublishSingleFile)' == 'true'">win-x64</RuntimeIdentifier>
+    <SelfContained Condition="'$(PublishSingleFile)' == 'true'">true</SelfContained>
+    <!-- REQUIRED: Photino ships native DLLs (Photino.Native.dll, WebView2Loader.dll).
+         They must be bundled inside the single file and extracted at first run. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VDKTool.Core\VDKTool.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Native app-style window (WebView2) for the web UI; browser fallback is opt-in.
+         Pulls in Photino.Native (Photino.Native.dll + WebView2Loader.dll). -->
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embed wwwroot so single-file publish serves the UI from resources. -->
+    <EmbeddedResource Include="wwwroot\**\*">
+      <LogicalName>wwwroot/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ship app.ico next to the exe so the Photino window can SetIconFile it.
+         For single-file publish it is also embedded (below) and extracted to a
+         temp file at runtime, so the window icon works in both layouts. -->
+    <Content Include="app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="app.ico">
+      <LogicalName>app.ico</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
